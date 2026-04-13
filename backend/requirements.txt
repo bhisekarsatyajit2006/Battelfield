@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+pydantic
+opencv-python
+numpy
+python-multipart
+sqlalchemy
+psycopg2-binary
+scikit-learn
+networkx

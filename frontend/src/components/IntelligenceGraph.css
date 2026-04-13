@@ -1,0 +1,75 @@
+.intelligence-graph {
+  background: rgba(10, 15, 26, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  border: 1px solid rgba(0, 255, 136, 0.3);
+  overflow: hidden;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.graph-header {
+  padding: 16px;
+  border-bottom: 1px solid rgba(0, 255, 136, 0.3);
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.graph-header h3 {
+  margin: 0 0 12px 0;
+  font-size: 16px;
+  color: #00ff88;
+  letter-spacing: 1px;
+}
+
+.graph-legend {
+  display: flex;
+  gap: 16px;
+  font-size: 11px;
+  color: #a0a0a0;
+}
+
+.graph-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.legend-vehicle {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #00ff88;
+}
+
+.legend-sensor {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #33ccff;
+}
+
+.legend-cluster {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #ffcc33;
+}
+
+.graph-container {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.graph-container svg {
+  cursor: grab;
+}
+
+.graph-container svg:active {
+  cursor: grabbing;
+}

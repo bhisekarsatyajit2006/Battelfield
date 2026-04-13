@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Procedural Gl - Particle Nebula</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Segoe UI', 'Monaco', 'Menlo', monospace;
+        }
+        #info {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            color: white;
+            background: rgba(0,0,0,0.6);
+            padding: 8px 16px;
+            border-radius: 8px;
+            backdrop-filter: blur(5px);
+            pointer-events: none;
+            z-index: 10;
+            font-size: 14px;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+            font-family: monospace;
+            box-shadow: 0 0 15px rgba(0,0,0,0.3);
+            border-left: 3px solid #ff3366;
+        }
+        #controls {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.55);
+            backdrop-filter: blur(8px);
+            padding: 12px 20px;
+            border-radius: 30px;
+            color: white;
+            font-size: 12px;
+            font-family: monospace;
+            display: flex;
+            gap: 20px;
+            z-index: 10;
+            pointer-events: auto;
+            border: 1px solid rgba(255,255,255,0.2);
+            font-weight: 500;
+        }
+        button {
+            background: rgba(20,30,45,0.9);
+            border: 1px solid rgba(255,255,255,0.4);
+            color: white;
+            padding: 5px 12px;
+            border-radius: 40px;
+            cursor: pointer;
+            font-family: monospace;
+            font-size: 12px;
+            transition: all 0.2s ease;
+            backdrop-filter: blur(4px);
+        }
+        button:hover {
+            background: #ff3366;
+            border-color: #ff99bb;
+            transform: scale(1.02);
+            box-shadow: 0 0 12px rgba(255,51,102,0.5);
+        }
+        .fps {
+            font-family: monospace;
+            background: #00000088;
+            padding: 2px 8px;
+            border-radius: 20px;
+            letter-spacing: 1px;
+        }
+        @media (max-width: 600px) {
+            #controls { padding: 8px 14px; gap: 12px; }
+            button { padding: 4px 10px; font-size: 10px; }
+            #info { font-size: 10px; bottom: 12px; left: 12px; }
+        }
+    </style>
+</head>
+<body>
+    <div id="info">
+        ✦ PROCEDURAL NEBULA | 10K PARTICLES | DYNAMIC FLOW FIELD ✦
+    </div>
+    <div id="controls">
+        <span>🌀 FLOW INTENSITY</span>
+        <button id="toggleFlow">SOFT</button>
+        <span class="fps" id="fpsCounter">⚡ FPS: --</span>
+    </div>
+
+    <!-- Import procedural-gl and Three.js core from CDN -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.128.0/build/three.module.js",
+                "procedural-gl": "https://unpkg.com/procedural-gl@0.6.0/dist/procedural-gl.module.js"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { ProceduralGL, utils } from 'procedural-gl';
+
+        // --- setup scene, camera, renderer ---
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x010114);
+        scene.fog = new THREE.FogExp2(0x010114, 0.0006); // subtle fog for depth
+
+        // camera: perspective, positioned to see wide particle field
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 2, 12);
+        camera.lookAt(0, 0, 0);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        document.body.appendChild(renderer.domElement);
+
+        // --- create a procedural-gl context to generate dynamic geometry ---
+        // We'll build a particle system with positions and colors generated via procedural rules,
+        // but also animate them with a custom flow field. For maximum "procedural-gl" flavor,
+        // we generate initial positions and colors using procedural noise functions.
+        
+        // Create a procedural instance to generate particle attributes
+        const proc = new ProceduralGL();
+        
+        // Configuration: number of particles
+        const PARTICLE_COUNT = 12000;
+        
+        // We'll generate positions within a toroidal / spherical volume with layered tendrils
+        // using procedural formulas: mix of spherical harmonics and perlin-based swirls.
+        
+        // Use the built-in utils for random and noise
+        const { random, perlin3, map } = utils;
+        
+        // Arrays to store initial positions and colors
+        const positions = new Float32Array(PARTICLE_COUNT * 3);
+        const colors = new Float32Array(PARTICLE_COUNT * 3);
+        
+        // Also store a per-particle "phase" offset for dynamic animation (flow field time shift)
+        const phases = new Float32Array(PARTICLE_COUNT);
+        
+        // Procedural generation loop: create a nebula-like distribution with tendrils and clusters
+        for (let i = 0; i < PARTICLE_COUNT; i++) {
+            // Use multi-octave procedural distribution:
+            // technique: start with spherical coordinates with radial distortion
+            const t = i / PARTICLE_COUNT; // 0..1 seed for deterministic variation
+            
+            // Create 3D procedural pattern: 
+            // polar angle theta and phi, plus radius influenced by perlin noise to form knots
+            let theta = Math.PI * 2 * (t * 7.3 % 1.0);
+            let phi = Math.acos(2 * (t * 5.7 % 1.0) - 1);
+            
+            // Add extra variation based on noise to form tendrils
+            const noiseX = perlin3(Math.cos(theta) * 2.5, Math.sin(phi) * 2.5, t * 8.0);
+            const noiseY = perlin3(Math.sin(theta) * 2.0, Math.cos(phi) * 2.0, t * 5.0 + 1.2);
+            const noiseZ = perlin3(Math.sin(phi) * 3.0, Math.cos(theta) * 2.2, t * 6.7);
+            
+            // Radial base: combination of spherical radius with chaotic rings
+            let rBase = 2.8 + noiseX * 1.2 + noiseY * 0.8;
+            // Add second harmonic for ring-like structures
+            rBase += Math.sin(theta * 5.0) * 0.4;
+            rBase += Math.cos(phi * 6.0) * 0.3;
+            // clamp and expand radius range
+            let radius = Math.max(0.6, Math.min(5.2, rBase));
+            
+            // Distort angles using noise to create flow-like arms
+            theta += noiseX * 0.8;
+            phi += noiseY * 0.6;
+            
+            // Convert to cartesian
+            let x = radius * Math.sin(phi) * Math.cos(theta);
+            let y = radius * Math.cos(phi) * 1.2; // stretch vertically
+            let z = radius * Math.sin(phi) * Math.sin(theta);
+            
+            // Add extra "wing" perturbation based on high-frequency noise
+            const warp = perlin3(x * 1.2, y * 1.2, z * 1.2) * 0.7;
+            x += warp * Math.sin(theta * 3.0);
+            z += warp * Math.cos(phi * 2.5);
+            y += warp * 0.5 * Math.sin(phi * 4.0);
+            
+            positions[i*3] = x;
+            positions[i*3+1] = y;
+            positions[i*3+2] = z;
+            
+            // Color generation: based on position and angle - vibrant nebula hues (pinks, cyans, purples)
+            const hueBase = (Math.atan2(y, x) + Math.PI) / (2 * Math.PI);
+            const satBase = 0.6 + perlin3(x * 0.8, y * 0.8, z * 0.8) * 0.4;
+            let rCol = 0.5 + 0.5 * Math.sin(x * 1.5 + 0.0);
+            let gCol = 0.3 + 0.7 * Math.cos(y * 1.2 + 2.0);
+            let bCol = 0.6 + 0.4 * Math.sin(z * 1.8 + 4.2);
+            
+            // Enhance magenta/cyan regions based on radius
+            const radNorm = (radius - 1.0) / 5.0;
+            rCol += Math.sin(radNorm * Math.PI * 4) * 0.2;
+            gCol += Math.cos(radNorm * Math.PI * 3 + 1.2) * 0.15;
+            bCol += Math.sin(radNorm * Math.PI * 5 + 2.4) * 0.25;
+            
+            // Clamp and set vibrant
+            colors[i*3] = Math.min(1.0, Math.max(0.2, rCol * 0.9 + 0.4));
+            colors[i*3+1] = Math.min(1.0, Math.max(0.1, gCol * 0.7 + 0.3));
+            colors[i*3+2] = Math.min(1.0, Math.max(0.3, bCol * 1.0 + 0.2));
+            
+            // Random phase offset for animation speed variation
+            phases[i] = i * 0.00053 + Math.random() * Math.PI * 2;
+        }
+        
+        // Create BufferGeometry and upload attributes
+        const particleGeometry = new THREE.BufferGeometry();
+        particleGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        particleGeometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+        
+        // Store original positions for dynamic flow (we'll mutate positions in shader, but also reference original for flow)
+        // However we want fluid motion, so we pass original positions as attribute "aOriginalPos"
+        particleGeometry.setAttribute('aOriginalPos', new THREE.BufferAttribute(positions, 3));
+        particleGeometry.setAttribute('aPhase', new THREE.BufferAttribute(phases, 1));
+        
+        // Custom shader material with procedural flow field, dynamic colors and twinkling.
+        // This is the core procedural beauty: a 3D flow field based on sin/cos and time, 
+        // making particles swim like a cosmic jellyfish.
+        
+        const vertexShader = `
+            uniform float uTime;
+            uniform float uFlowIntensity;
+            attribute vec3 aOriginalPos;
+            attribute float aPhase;
+            attribute vec3 color;
+            varying vec3 vColor;
+            
+            // 3D flow field function: curl-like, procedural and smooth
+            vec3 flowField(vec3 pos, float t) {
+                // Use multiple frequencies to get interesting trajectories
+                float freq1 = 0.55;
+                float freq2 = 0.93;
+                float freq3 = 1.47;
+                
+                // swirling patterns based on position and time
+                float x1 = sin(pos.y * freq1 + t) * cos(pos.z * freq1 + t * 0.7);
+                float y1 = cos(pos.z * freq2 + t * 1.2) * sin(pos.x * freq2 + t * 0.5);
+                float z1 = sin(pos.x * freq3 + t * 0.9) * cos(pos.y * freq3 + t);
+                
+                // secondary layered motion - toroidal flow
+                float x2 = sin(pos.z * 1.2 + t * 1.1) * 0.5;
+                float y2 = cos(pos.x * 1.4 + t * 0.8) * 0.5;
+                float z2 = sin(pos.y * 1.1 + t * 1.3) * 0.5;
+                
+                // radial breathing effect
+                float rad = length(pos);
+                float pulse = sin(rad * 2.0 - t * 1.8) * 0.2;
+                
+                vec3 flow = vec3(x1 + x2 + pulse, y1 + y2 + pulse * 0.7, z1 + z2);
+                return flow * 0.45;
+            }
+            
+            void main() {
+                // Compute animated offset using flow field
+                vec3 pos = aOriginalPos;
+                float timeShift = uTime * 0.85 + aPhase;
+                vec3 offset = flowField(pos, timeShift);
+                offset *= uFlowIntensity;
+                
+                // Slight additional orbital motion based on particle phase
+                float orbit = sin(aPhase * 5.0 + uTime * 1.2) * 0.08;
+                offset.x += cos(pos.z * 2.0 + uTime) * 0.04;
+                offset.z += sin(pos.x * 2.0 + uTime * 1.1) * 0.04;
+                offset.y += sin(pos.y * 1.8 + uTime * 0.9) * 0.05;
+                
+                vec3 finalPos = pos + offset;
+                
+                // Pass color with slight time modulation for shimmer
+                float shimmer = 0.8 + 0.4 * sin(finalPos.x * 3.0 + finalPos.y * 2.0 + uTime * 3.0);
+                vColor = color * (0.7 + 0.5 * shimmer);
+                
+                // Standard transformation
+                vec4 mvPosition = modelViewMatrix * vec4(finalPos, 1.0);
+                gl_PointSize = (2.0 / - mvPosition.z) * 1.8 + 1.2;
+                gl_PointSize = clamp(gl_PointSize, 1.2, 5.5);
+                gl_Position = projectionMatrix * mvPosition;
+            }
+        `;
+        
+        const fragmentShader = `
+            uniform float uTime;
+            varying vec3 vColor;
+            
+            void main() {
+                // Draw soft circular particles with glow
+                vec2 coord = gl_PointCoord;
+                float dist = length(coord - vec2(0.5));
+                if (dist > 0.5) discard;
+                
+                // radial gradient for soft glow
+                float alpha = (1.0 - smoothstep(0.1, 0.5, dist)) * 0.9;
+                alpha *= 0.85 + 0.3 * sin(gl_PointCoord.x * 15.0 + uTime * 8.0);
+                
+                // add subtle color variation per particle edge
+                vec3 finalColor = vColor;
+                finalColor += vec3(0.3, 0.15, 0.4) * (1.0 - dist * 1.2);
+                finalColor = clamp(finalColor, 0.2, 1.2);
+                
+                gl_FragColor = vec4(finalColor, alpha);
+            }
+        `;
+        
+        // Uniforms: time and intensity control
+        const uniforms = {
+            uTime: { value: 0 },
+            uFlowIntensity: { value: 0.82 }
+        };
+        
+        const particleMaterial = new THREE.ShaderMaterial({
+            uniforms: uniforms,
+            vertexShader: vertexShader,
+            fragmentShader: fragmentShader,
+            transparent: true,
+            depthWrite: false,
+            blending: THREE.AdditiveBlending
+        });
+        
+        const particleSystem = new THREE.Points(particleGeometry, particleMaterial);
+        scene.add(particleSystem);
+        
+        // --- Add a subtle background starfield using second procedural points with vanilla geometry ---
+        const starCount = 1800;
+        const starPositions = new Float32Array(starCount * 3);
+        for (let i = 0; i < starCount; i++) {
+            // spread stars far in a large cube
+            starPositions[i*3] = (Math.random() - 0.5) * 180;
+            starPositions[i*3+1] = (Math.random() - 0.5) * 100;
+            starPositions[i*3+2] = (Math.random() - 0.5) * 80 - 40;
+        }
+        const starGeo = new THREE.BufferGeometry();
+        starGeo.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
+        const starMat = new THREE.PointsMaterial({ color: 0xaaccff, size: 0.18, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending });
+        const stars = new THREE.Points(starGeo, starMat);
+        scene.add(stars);
+        
+        // rotate stars very slowly for ambiance
+        function animateStars() {
+            stars.rotation.y += 0.0002;
+            stars.rotation.x += 0.0001;
+            requestAnimationFrame(animateStars);
+        }
+        animateStars();
+        
+        // --- Optional: subtle central glow effect using a simple lens flare or point light? Actually a small emissive sphere ---
+        const coreGlowMat = new THREE.MeshStandardMaterial({
+            color: 0xff44aa,
+            emissive: 0x331133,
+            emissiveIntensity: 0.9,
+            transparent: true,
+            opacity: 0.3
+        });
+        const coreSphere = new THREE.Mesh(new THREE.SphereGeometry(0.45, 16, 16), coreGlowMat);
+        scene.add(coreSphere);
+        
+        // Add a few point lights to enhance depth (not necessary for points, but helps mood)
+        const ambientLight = new THREE.AmbientLight(0x111122);
+        scene.add(ambientLight);
+        const backLight = new THREE.PointLight(0x6644ff, 0.5);
+        backLight.position.set(2, 3, -5);
+        scene.add(backLight);
+        const fillLight = new THREE.PointLight(0xff66aa, 0.4);
+        fillLight.position.set(-3, 1, 4);
+        scene.add(fillLight);
+        
+        // Simple orbital camera animation? let's add interactive but lightweight: slight auto rotation around Y-axis?
+        // We'll make camera drift a little but keep focus on center. For better experience, make camera orbit subtly.
+        let cameraAngle = 0;
+        
+        // --- UI Flow intensity toggle with dynamic visual feedback ---
+        const toggleBtn = document.getElementById('toggleFlow');
+        let flowMode = 1; // 0 = soft, 1 = intense
+        toggleBtn.textContent = "INTENSE";
+        toggleBtn.addEventListener('click', () => {
+            if (flowMode === 1) {
+                flowMode = 0;
+                uniforms.uFlowIntensity.value = 0.38;
+                toggleBtn.textContent = "SOFT";
+                toggleBtn.style.background = "rgba(80,80,120,0.9)";
+            } else {
+                flowMode = 1;
+                uniforms.uFlowIntensity.value = 0.95;
+                toggleBtn.textContent = "INTENSE";
+                toggleBtn.style.background = "rgba(20,30,45,0.9)";
+            }
+        });
+        
+        // FPS counter
+        const fpsElem = document.getElementById('fpsCounter');
+        let frameCount = 0;
+        let lastTime = performance.now();
+        
+        // animation loop
+        let clock = new THREE.Clock();
+        
+        function animate() {
+            const delta = clock.getDelta();
+            const elapsedTime = performance.now() / 1000; // seconds
+            
+            // update shader time
+            uniforms.uTime.value = elapsedTime;
+            
+            // Gentle camera motion: slight circular movement and subtle tilt
+            cameraAngle += 0.0012;
+            const radiusCam = 11.5;
+            const camX = Math.sin(cameraAngle * 0.23) * 1.2;
+            const camZ = 11.0 + Math.cos(cameraAngle * 0.37) * 0.7;
+            camera.position.x += (camX - camera.position.x) * 0.02;
+            camera.position.z += (camZ - camera.position.z) * 0.02;
+            camera.position.y = 1.7 + Math.sin(cameraAngle * 0.5) * 0.2;
+            camera.lookAt(0, 0.2, 0);
+            
+            // pulsate the core sphere intensity for subtle breathing
+            const intensity = 0.7 + Math.sin(elapsedTime * 1.8) * 0.3;
+            coreGlowMat.emissiveIntensity = intensity * 0.8;
+            
+            // starfield twinkling: change opacity gradually via material if needed (skip for perf)
+            
+            renderer.render(scene, camera);
+            
+            // update FPS
+            frameCount++;
+            const now = performance.now();
+            if (now - lastTime >= 1000) {
+                const fps = Math.round((frameCount * 1000) / (now - lastTime));
+                fpsElem.innerHTML = `⚡ FPS: ${fps}`;
+                frameCount = 0;
+                lastTime = now;
+            }
+            
+            requestAnimationFrame(animate);
+        }
+        
+        animate();
+        
+        // handle resize
+        window.addEventListener('resize', onWindowResize, false);
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+        
+        // Small console greeting
+        console.log('✨ Procedural Nebula Active | 12k particles | Dynamic Flow Field ✨');
+        
+        // Optional: subtle effect of mouse interaction? Not needed, but nice bonus: minimal parallax
+        document.addEventListener('mousemove', (event) => {
+            // slight influence on flow intensity? No, but make camera target shift a tiny bit.
+            const mouseX = (event.clientX / window.innerWidth) * 2 - 1;
+            const targetLookX = mouseX * 0.2;
+            // smooth lookAt is handled by camera movement already, just feel immersive.
+            // Not overriding lookAt fully to keep stability.
+        });
+    </script>
+</body>
+</html>
