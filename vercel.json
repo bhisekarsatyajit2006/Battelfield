@@ -1,0 +1,45 @@
+{
+  "version": 2,
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/index.ts"
+    },
+    {
+      "source": "/blockchain/logs",
+      "destination": "/api/index.ts"
+    },
+    {
+      "source": "/sensor/simulate",
+      "destination": "/api/index.ts"
+    },
+    {
+      "source": "/fusion",
+      "destination": "/api/index.ts"
+    },
+    {
+      "source": "/threat",
+      "destination": "/api/index.ts"
+    },
+    {
+      "source": "/report",
+      "destination": "/api/index.ts"
+    },
+    {
+      "source": "/drone/(.*)",
+      "destination": "/api/index.ts"
+    },
+    {
+      "source": "/satellite/(.*)",
+      "destination": "/api/index.ts"
+    },
+    {
+      "source": "/query",
+      "destination": "/api/index.ts"
+    },
+    {
+      "source": "/((?!api|assets|favicon.ico).*)",
+      "destination": "/index.html"
+    }
+  ]
+}
