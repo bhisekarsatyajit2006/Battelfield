@@ -1,0 +1,467 @@
+.tactical-drone-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(3, 6, 12, 0.88);
+  backdrop-filter: blur(8px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.tactical-drone-modal {
+  width: 95%;
+  max-width: 1100px;
+  max-height: 92vh;
+  background: #080d18;
+  border: 1px solid rgba(0, 255, 136, 0.4);
+  border-radius: 8px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8), 0 0 20px rgba(0, 255, 136, 0.15);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.drone-modal-header {
+  padding: 12px 20px;
+  background: rgba(10, 16, 28, 0.95);
+  border-bottom: 1px solid rgba(0, 255, 136, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.modal-title-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.drone-live-badge {
+  color: #ff3366;
+  font-family: monospace;
+  font-size: 11px;
+  font-weight: bold;
+  letter-spacing: 1px;
+  animation: pulse 1.5s infinite;
+}
+
+.modal-title-group h3 {
+  margin: 0;
+  font-size: 14px;
+  letter-spacing: 0.5px;
+  color: #e0e8f5;
+}
+
+.mission-name {
+  font-size: 11px;
+  color: #00ff88;
+  background: rgba(0, 255, 136, 0.1);
+  padding: 2px 8px;
+  border-radius: 4px;
+  border: 1px solid rgba(0, 255, 136, 0.3);
+}
+
+.modal-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.hud-tabs {
+  display: flex;
+  gap: 6px;
+  background: rgba(0, 0, 0, 0.4);
+  padding: 3px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.tab-btn {
+  background: transparent;
+  border: none;
+  color: #8899aa;
+  font-size: 11px;
+  padding: 5px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.tab-btn.active {
+  background: rgba(0, 255, 136, 0.2);
+  color: #00ff88;
+  font-weight: bold;
+}
+
+.drone-close-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  border-radius: 4px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.drone-close-btn:hover {
+  background: rgba(255, 50, 80, 0.3);
+  border-color: #ff3366;
+}
+
+.drone-modal-content {
+  overflow-y: auto;
+  flex: 1;
+  background: #050810;
+}
+
+/* HUD Viewport */
+.hud-viewport-container {
+  display: flex;
+  flex-direction: column;
+}
+
+.osd-top-ribbon {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 8px 16px;
+  background: rgba(8, 12, 22, 0.9);
+  border-bottom: 1px solid rgba(0, 255, 136, 0.2);
+  font-family: 'Courier New', monospace;
+  font-size: 11px;
+}
+
+.osd-item {
+  display: flex;
+  gap: 5px;
+}
+
+.osd-label {
+  color: #778899;
+}
+
+.osd-val {
+  color: #00ff88;
+  font-weight: bold;
+}
+
+.canvas-wrapper {
+  position: relative;
+  width: 100%;
+  background: #000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 420px;
+}
+
+.drone-tactical-canvas {
+  width: 100%;
+  max-width: 1000px;
+  height: auto;
+  display: block;
+  cursor: crosshair;
+}
+
+.uploaded-video-container {
+  width: 100%;
+  position: relative;
+}
+
+.drone-native-video {
+  width: 100%;
+  max-height: 480px;
+  display: block;
+}
+
+.ai-overlay-banner {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  right: 12px;
+  background: rgba(0, 0, 0, 0.75);
+  border: 1px solid #00ff88;
+  padding: 8px 14px;
+  border-radius: 4px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: #00ff88;
+  font-size: 12px;
+  font-family: monospace;
+}
+
+.ai-overlay-banner button {
+  background: rgba(0, 255, 136, 0.2);
+  border: 1px solid #00ff88;
+  color: #fff;
+  padding: 4px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.target-floating-card {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  width: 280px;
+  background: rgba(8, 14, 24, 0.92);
+  border: 1px solid #00ffff;
+  box-shadow: 0 4px 20px rgba(0, 255, 255, 0.2);
+  border-radius: 6px;
+  padding: 12px;
+  font-family: 'Courier New', monospace;
+  font-size: 11px;
+}
+
+.target-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid rgba(0, 255, 255, 0.3);
+  padding-bottom: 6px;
+  margin-bottom: 8px;
+}
+
+.target-lock-icon {
+  color: #00ffff;
+  font-weight: bold;
+}
+
+.target-card-header button {
+  background: transparent;
+  border: none;
+  color: #888;
+  cursor: pointer;
+}
+
+.target-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.target-data-row {
+  display: flex;
+  justify-content: space-between;
+}
+
+.target-data-row span {
+  color: #8899aa;
+}
+
+.green-txt { color: #00ff88; }
+.red-txt { color: #ff3366; }
+.amber-txt { color: #ffaa00; }
+.blue-txt { color: #33ccff; }
+
+.hud-bottom-bar {
+  padding: 12px 16px;
+  background: rgba(8, 12, 22, 0.95);
+  border-top: 1px solid rgba(0, 255, 136, 0.2);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.preset-selector-group, .spectral-filter-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ctrl-label {
+  font-size: 10px;
+  color: #778899;
+  font-family: monospace;
+}
+
+.preset-btn, .filter-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #aabbcc;
+  padding: 5px 10px;
+  font-size: 11px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.preset-btn:hover, .filter-btn:hover {
+  border-color: #00ff88;
+  color: #fff;
+}
+
+.preset-btn.active, .filter-btn.active {
+  background: rgba(0, 255, 136, 0.2);
+  border-color: #00ff88;
+  color: #00ff88;
+  font-weight: bold;
+}
+
+.drone-file-upload-btn {
+  background: linear-gradient(135deg, rgba(0, 255, 136, 0.3), rgba(0, 150, 255, 0.3));
+  border: 1px solid #00ff88;
+  color: #00ff88;
+  font-weight: bold;
+  font-size: 11px;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  letter-spacing: 0.5px;
+}
+
+.drone-file-upload-btn:hover:not(:disabled) {
+  background: rgba(0, 255, 136, 0.4);
+  box-shadow: 0 0 15px rgba(0, 255, 136, 0.3);
+}
+
+/* ML Analytics Tab */
+.ml-analytics-tab-content {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.ml-summary-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.ml-card {
+  background: rgba(12, 18, 30, 0.85);
+  border: 1px solid rgba(0, 255, 136, 0.3);
+  border-radius: 6px;
+  padding: 16px;
+}
+
+.ml-card h4 {
+  margin: 0 0 12px 0;
+  font-size: 12px;
+  color: #33ccff;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 6px;
+}
+
+.ml-metric-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  margin-bottom: 8px;
+  color: #a0b0c0;
+}
+
+.ml-metric-row code {
+  color: #00ff88;
+  font-family: monospace;
+}
+
+.ml-target-table-wrapper {
+  background: rgba(12, 18, 30, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  padding: 16px;
+  overflow-x: auto;
+}
+
+.ml-target-table-wrapper h4 {
+  margin: 0 0 12px 0;
+  font-size: 12px;
+  color: #e0e8f5;
+}
+
+.ml-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+}
+
+.ml-table th {
+  text-align: left;
+  padding: 8px 10px;
+  background: rgba(0, 0, 0, 0.4);
+  color: #778899;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.ml-table td {
+  padding: 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  color: #ccddee;
+}
+
+.row-high-threat td {
+  background: rgba(255, 50, 80, 0.05);
+}
+
+.convoy-tag {
+  background: rgba(51, 204, 255, 0.15);
+  color: #33ccff;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 10px;
+  border: 1px solid rgba(51, 204, 255, 0.3);
+}
+
+.outlier-tag {
+  background: rgba(255, 255, 255, 0.05);
+  color: #888;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 10px;
+}
+
+.threat-badge {
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-weight: bold;
+  font-size: 10px;
+}
+
+.threat-badge.high {
+  background: rgba(255, 51, 102, 0.2);
+  color: #ff3366;
+  border: 1px solid #ff3366;
+}
+
+.threat-badge.medium {
+  background: rgba(255, 170, 0, 0.2);
+  color: #ffaa00;
+  border: 1px solid #ffaa00;
+}
+
+.threat-badge.low {
+  background: rgba(0, 255, 136, 0.2);
+  color: #00ff88;
+  border: 1px solid #00ff88;
+}
+
+.mono-txt {
+  font-family: monospace;
+  color: #00ff88;
+}
+
+.action-txt {
+  color: #a0c0e0;
+  max-width: 240px;
+}
+
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.4; }
+  100% { opacity: 1; }
+}

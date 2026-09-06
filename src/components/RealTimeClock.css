@@ -1,0 +1,52 @@
+.real-time-clock {
+  background: rgba(5, 8, 15, 0.85);
+  border: 1px solid rgba(0, 255, 136, 0.4);
+  border-radius: 6px;
+  padding: 4px 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  backdrop-filter: blur(5px);
+}
+
+.clock-time {
+  font-family: 'Courier New', monospace;
+  font-size: 14px;
+  font-weight: bold;
+  color: #00ff88;
+  display: flex;
+  gap: 4px;
+  align-items: baseline;
+}
+
+.time-zone {
+  font-size: 10px;
+  color: #33ccff;
+  font-weight: 600;
+}
+
+.clock-date {
+  font-size: 11px;
+  color: #a0a0a0;
+  border-left: 1px solid rgba(255, 255, 255, 0.15);
+  padding-left: 10px;
+}
+
+.system-uptime {
+  font-size: 10px;
+  color: #888;
+  font-family: monospace;
+  border-left: 1px solid rgba(255, 255, 255, 0.15);
+  padding-left: 10px;
+}
+
+@media (max-width: 900px) {
+  .system-uptime {
+    display: none;
+  }
+}
+@media (max-width: 650px) {
+  .clock-date {
+    display: none;
+  }
+}

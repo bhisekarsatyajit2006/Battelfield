@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <script>
+      (function() {
+        try {
+          var target = typeof window !== 'undefined' ? window : (typeof globalThis !== 'undefined' ? globalThis : null);
+          if (!target) return;
+          var _rawFetch = typeof target.fetch === 'function' ? target.fetch.bind(target) : target.fetch;
+          var _currentFetch = _rawFetch;
+
+          function defineFetchProp(obj) {
+            if (!obj) return;
+            try {
+              Object.defineProperty(obj, 'fetch', {
+                get: function() {
+                  return _currentFetch;
+                },
+                set: function(val) {
+                  _currentFetch = val;
+                },
+                configurable: true,
+                enumerable: true
+              });
+            } catch (err) {}
+          }
+
+          defineFetchProp(target);
+          if (typeof Window !== 'undefined' && Window.prototype) {
+            defineFetchProp(Window.prototype);
+          }
+        } catch (e) {
+          console.warn('Fetch setter initialization warning:', e);
+        }
+      })();
+    </script>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Battlefield AI Intelligence System</title>
+    <meta name="description" content="Tactical battlefield command center with drone surveillance tracking, satellite intelligence, sensor fusion, threat scoring, and blockchain verification logs." />
+    <meta property="og:title" content="Battlefield AI Intelligence System" />
+    <meta property="og:description" content="Tactical battlefield command center with drone surveillance tracking, satellite intelligence, sensor fusion, threat scoring, and blockchain verification logs." />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
