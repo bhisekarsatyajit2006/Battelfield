@@ -297,7 +297,8 @@ Analyst Query: "${query}"`
   }
 }
 
-// API Routes
+// --- API Routes ---
+
 app.get(['/api/health', '/health'], (req: Request, res: Response) => {
   res.json({ status: 'ok' });
 });
@@ -330,6 +331,121 @@ app.get(['/report', '/api/report'], (req: Request, res: Response) => {
   res.json({
     summary: pipelineState.report,
     recommendation: 'Deploy surveillance drone immediately. Maintain radar lock on Sector Bravo.'
+  });
+});
+
+// Drone video upload endpoint (handles /drone/upload & /api/drone/upload)
+app.post(['/drone/upload', '/api/drone/upload'], upload.single('file') as any, async (req: Request, res: Response) => {
+  const filename = req.file ? req.file.originalname : 'drone_feed.mp4';
+  const newCount = 6;
+  const detections = [];
+  const paths: Record<string, [number, number][]> = {};
+  const motion: Record<string, { speed: number; direction: number }> = {};
+  const predictions: Record<string, [number, number][]> = {};
+  const threats: Record<string, { level: 'HIGH' | 'MEDIUM' | 'LOW'; score: number; factors: string[] }> = {};
+  const fused: Record<string, { location: [number, number]; confidence: number; threat: { level: string; score: number }; sources: string[] }> = {};
+
+  const baseLat = 20.15;
+  const baseLon = 76.92;
+  const itemsForClustering: { id: string; location: [number, number]; speed: number }[] = [];
+
+  for (let i = 1; i <= newCount; i++) {
+    const objId = `UAV-TRK-${i.toString().padStart(3, '0')}`;
+    const latOffset = (Math.random() - 0.5) * 0.18;
+    const lonOffset = (Math.random() - 0.5) * 0.18;
+    const currLat = parseFloat((baseLat + latOffset).toFixed(5));
+    const currLon = parseFloat((baseLon + lonOffset).toFixed(5));
+
+    const pathHistory: [number, number][] = [
+      [parseFloat((currLat - 0.02).toFixed(5)), parseFloat((currLon - 0.02).toFixed(5))],
+      [parseFloat((currLat - 0.01).toFixed(5)), parseFloat((currLon - 0.01).toFixed(5))],
+      [currLat, currLon]
+    ];
+    paths[objId] = pathHistory;
+
+    const kalman = new ServerKalmanTracker(pathHistory);
+    const kinematics = kalman.getKinematics();
+    motion[objId] = kinematics;
+    predictions[objId] = kalman.forecast(3, 1.4);
+
+    itemsForClustering.push({ id: objId, location: [currLat, currLon], speed: kinematics.speed });
+  }
+
+  const { clusters, convoySummaries } = runServerDBSCAN(itemsForClustering, 0.06, 2);
+
+  for (let i = 1; i <= newCount; i++) {
+    const objId = `UAV-TRK-${i.toString().padStart(3, '0')}`;
+    const currLocation = paths[objId][paths[objId].length - 1];
+    const targetClass = i <= 2 ? 'armored_vehicle' : 'transport_truck';
+    const clusterIdx = clusters[objId];
+    const inConvoy = clusterIdx !== undefined && clusterIdx >= 0;
+
+    const threatAssessment = calculateServerBayesianThreat({
+      targetClass,
+      speed: motion[objId].speed,
+      heading: motion[objId].direction,
+      location: currLocation,
+      inConvoy
+    });
+
+    threats[objId] = threatAssessment;
+    fused[objId] = {
+      location: currLocation,
+      confidence: parseFloat((0.84 + Math.random() * 0.14).toFixed(2)),
+      threat: threatAssessment,
+      sources: ['UAV Optical HD', 'Forward Ground Radar']
+    };
+
+    detections.push({
+      object_id: objId,
+      bbox: [90 + i * 45, 75 + i * 32, 85, 52],
+      confidence: parseFloat((0.86 + Math.random() * 0.11).toFixed(2)),
+      class: targetClass
+    });
+  }
+
+  const dataHash = hashData({ threats, fused, timestamp: Date.now(), filename });
+  const txHash = '0x' + crypto.randomBytes(32).toString('hex');
+  const blockchainLog = {
+    tx_hash: txHash,
+    data_hash: dataHash,
+    timestamp: new Date().toISOString(),
+    status: 'verified' as const,
+    block_number: 1849204 + Math.floor(Math.random() * 1000)
+  };
+
+  pipelineState.paths = paths;
+  pipelineState.predictions = predictions;
+  pipelineState.threats = threats;
+  pipelineState.clusters = clusters;
+  pipelineState.fused_intelligence = fused;
+
+  blockchainLedger.unshift({
+    id: `tx-drone-${Date.now().toString(36)}`,
+    type: 'drone_upload',
+    timestamp: blockchainLog.timestamp,
+    tx_hash: txHash,
+    data_hash: dataHash,
+    status: 'verified',
+    block_number: blockchainLog.block_number,
+    details: { mission: 'UAV OPTICAL RECON', filename, objects_detected: detections.length }
+  });
+
+  res.json({
+    status: 'processed',
+    message: 'Drone intelligence ML pipeline complete + verified',
+    filename,
+    total_detections: detections.length,
+    tracked_objects: Object.keys(paths).length,
+    sample_detections: detections,
+    paths,
+    motion,
+    predictions,
+    clusters,
+    convoy_summaries: convoySummaries,
+    threats,
+    fused_intelligence: fused,
+    blockchain: blockchainLog
   });
 });
 
@@ -398,6 +514,42 @@ app.post(['/satellite/scan', '/api/satellite/scan'], (req: Request, res: Respons
     active_band: band,
     total_objects: detections.length,
     detections,
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Satellite image upload endpoint (handles /satellite/upload & /api/satellite/upload)
+app.post(['/satellite/upload', '/api/satellite/upload'], upload.single('file') as any, (req: Request, res: Response) => {
+  const filename = req.file ? req.file.originalname : 'recon_imagery.png';
+  const detections = generateSatelliteDetections('optical', 14);
+  const txHash = '0x' + crypto.randomBytes(32).toString('hex');
+  const dataHash = hashData({ filename, count: detections.length, timestamp: Date.now() });
+
+  const blockchainLog = {
+    tx_hash: txHash,
+    data_hash: dataHash,
+    timestamp: new Date().toISOString(),
+    status: 'verified' as const,
+    block_number: 1849400 + Math.floor(Math.random() * 500)
+  };
+
+  blockchainLedger.unshift({
+    id: `tx-img-${Date.now().toString(36)}`,
+    type: 'satellite_recon',
+    timestamp: blockchainLog.timestamp,
+    tx_hash: txHash,
+    data_hash: dataHash,
+    status: 'verified',
+    block_number: blockchainLog.block_number,
+    details: { imagery_file: filename, targets_extracted: detections.length }
+  });
+
+  res.json({
+    status: 'success',
+    filename,
+    total_objects: detections.length,
+    detections,
+    blockchain: blockchainLog,
     timestamp: new Date().toISOString()
   });
 });
