@@ -1,0 +1,91 @@
+.blockchain-page {
+  padding: 24px;
+  height: 100%;
+  overflow-y: auto;
+  background: #0a0f1a;
+  color: #e0e0e0;
+}
+
+.blockchain-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.blockchain-header h1 {
+  font-size: 22px;
+  color: #00ff88;
+  margin: 0;
+}
+
+.blockchain-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.stat {
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid rgba(0, 255, 136, 0.2);
+  padding: 16px;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.stat-value {
+  font-size: 24px;
+  font-weight: bold;
+  color: #00ff88;
+}
+
+.stat-label {
+  font-size: 12px;
+  color: #a0a0a0;
+  margin-top: 4px;
+}
+
+.filter-bar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.filter-bar button {
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid rgba(0, 255, 136, 0.2);
+  color: #a0a0a0;
+  padding: 6px 14px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.filter-bar button.active {
+  color: #00ff88;
+  border-color: #00ff88;
+  background: rgba(0, 255, 136, 0.1);
+}
+
+.logs-container {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.log-entry {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(0, 255, 136, 0.15);
+  padding: 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.log-entry:hover {
+  border-color: #00ff88;
+  background: rgba(0, 255, 136, 0.05);
+}

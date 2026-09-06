@@ -1,122 +1,69 @@
 :root {
-  --bg: #0b1a13;
-  --panel: #10261c;
-  --border: #1f4d36;
-  --accent: #2e7d32;
-  --text: #c8e6c9;
+  --bg-dark: #060a12;
+  --bg-card: #0b1322;
+  --bg-panel: #0e192d;
+  --border-color: rgba(0, 255, 136, 0.2);
+  --border-glow: rgba(0, 255, 136, 0.4);
+  --neon-green: #00ff88;
+  --neon-cyan: #33ccff;
+  --neon-orange: #ff9933;
+  --neon-red: #ff3366;
+  --text-main: #e2e8f0;
+  --text-muted: #94a3b8;
+  --font-mono: 'Consolas', 'Monaco', 'Courier New', monospace;
 }
 
-body {
+* {
+  box-sizing: border-box;
   margin: 0;
-  background: var(--bg);
-  color: var(--text);
-  font-family: "Segoe UI", sans-serif;
+  padding: 0;
 }
 
-/* NAVBAR */
-.navbar {
-  height: 55px;
-  display: flex;
-  align-items: center;
-  padding: 0 20px;
-  background: var(--panel);
-  border-bottom: 1px solid var(--border);
-}
-
-/* MAIN GRID */
-.dashboard {
-  display: grid;
-  grid-template-columns: 260px 1fr 300px;
-  grid-template-rows: 1fr 200px 180px;
-  gap: 10px;
-  height: calc(100vh - 55px);
-  padding: 10px;
-}
-
-/* PANELS */
-.panel {
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 10px;
+html, body, #root {
+  width: 100%;
+  height: 100%;
   overflow: hidden;
+  background-color: var(--bg-dark);
+  color: var(--text-main);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
 
-/* AREAS */
-.video { grid-column: 1; grid-row: 1; }
-.map { grid-column: 2; grid-row: 1; }
-.threat { grid-column: 3; grid-row: 1; overflow-y: auto; }
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(10, 16, 28, 0.8);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--neon-green);
+}
 
-.report { grid-column: 1 / span 3; grid-row: 2; }
-.chat { grid-column: 1 / span 3; grid-row: 3; }
-
-/* MAP */
+/* Leaflet Overrides */
 .leaflet-container {
   width: 100%;
   height: 100%;
+  background: #08111e !important;
+  font-family: inherit;
 }
 
-/* Tactical Dark Tile Inversion for OSM */
 .tactical-dark-tiles {
   filter: invert(100%) hue-rotate(180deg) brightness(85%) contrast(115%);
 }
 
-.map-layer-selector {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  z-index: 1000;
-  display: flex;
-  gap: 4px;
-  background: rgba(16, 38, 28, 0.92);
-  padding: 4px;
-  border-radius: 6px;
-  border: 1px solid #1f4d36;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(4px);
+.leaflet-popup-content-wrapper {
+  background: rgba(11, 19, 34, 0.95) !important;
+  color: #fff !important;
+  border: 1px solid var(--neon-green) !important;
+  box-shadow: 0 0 15px rgba(0, 255, 136, 0.3) !important;
+  backdrop-filter: blur(8px);
 }
-
-.map-layer-btn {
-  background: transparent;
-  color: #a8d5ba;
-  border: 1px solid transparent;
-  border-radius: 4px;
-  padding: 4px 9px;
-  font-size: 11px;
-  font-weight: 600;
-  cursor: pointer;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-  transition: all 0.2s ease;
-  font-family: inherit;
-}
-
-.map-layer-btn:hover {
-  background: rgba(46, 125, 50, 0.35);
-  color: #ffffff;
-}
-
-.map-layer-btn.active {
-  background: #2e7d32;
-  color: #ffffff;
-  border-color: #4caf50;
-  box-shadow: 0 0 6px rgba(76, 175, 80, 0.4);
-}
-
-/* THREATS */
-.threat-item {
-  padding: 6px;
-  border-bottom: 1px solid #1b3a2a;
-}
-
-.high { color: #ff4d4d; }
-.medium { color: #ffa726; }
-.low { color: #66bb6a; }
-
-/* SCROLL */
-.threat::-webkit-scrollbar {
-  width: 5px;
-}
-.threat::-webkit-scrollbar-thumb {
-  background: var(--accent);
+.leaflet-popup-tip {
+  background: rgba(11, 19, 34, 0.95) !important;
 }
