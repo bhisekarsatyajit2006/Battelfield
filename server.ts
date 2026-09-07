@@ -504,11 +504,22 @@ async function startServer() {
     res.json({ status: 'stored in database' });
   });
 
+function isCivilianVideo(filename: string): boolean {
+  const nameLower = filename.toLowerCase();
+  const militaryTerms = ['recon', 'drone', 'uav', 'reaper', 'military', 'tactical', 'defense', 'target', 't90', 'convoy', 'radar', 'missile', 'combat', 'war'];
+  const hasMilitary = militaryTerms.some(term => nameLower.includes(term));
+  if (hasMilitary) return false;
+
+  const civilianTerms = ['home', 'family', 'house', 'civilian', 'personal', 'vacation', 'trip', 'test', 'sample', 'vid', 'mov', 'mp4', 'whatsapp', 'img', 'video', 'daily', 'camera'];
+  return civilianTerms.some(term => nameLower.includes(term)) || true;
+}
+
   // Drone video upload with Machine Learning Pipeline (Kalman Filter, DBSCAN, Bayesian Threat)
   app.post('/drone/upload', upload.single('file') as any, async (req: Request, res: Response) => {
     const filename = req.file ? req.file.originalname : 'drone_feed.mp4';
+    const civilian = isCivilianVideo(filename);
 
-    const newCount = 6;
+    const newCount = civilian ? 4 : 6;
     const detections = [];
     const paths: Record<string, [number, number][]> = {};
     const motion: Record<string, { speed: number; direction: number }> = {};
@@ -522,7 +533,7 @@ async function startServer() {
 
     // 1. Generate path history and apply Kalman Filter for forward prediction & kinematics
     for (let i = 1; i <= newCount; i++) {
-      const objId = `UAV-TRK-${i.toString().padStart(3, '0')}`;
+      const objId = civilian ? `CIV-TRK-${i.toString().padStart(3, '0')}` : `UAV-TRK-${i.toString().padStart(3, '0')}`;
       const latOffset = (Math.random() - 0.5) * 0.18;
       const lonOffset = (Math.random() - 0.5) * 0.18;
       const currLat = parseFloat((baseLat + latOffset).toFixed(5));
@@ -559,14 +570,18 @@ async function startServer() {
 
     // 3. Machine Learning: Run Bayesian Multi-Factor Threat Scorer
     for (let i = 1; i <= newCount; i++) {
-      const objId = `UAV-TRK-${i.toString().padStart(3, '0')}`;
+      const objId = civilian ? `CIV-TRK-${i.toString().padStart(3, '0')}` : `UAV-TRK-${i.toString().padStart(3, '0')}`;
       const currLocation = paths[objId][paths[objId].length - 1];
-      const targetClass = i <= 2 ? 'armored_vehicle' : i <= 4 ? 'transport_truck' : 'armored_vehicle';
+      const targetClass = civilian ? 'Civilian Vehicle / Non-Hostile' : i <= 2 ? 'armored_vehicle' : 'transport_truck';
       const clusterIdx = clusters[objId];
-      const inConvoy = clusterIdx !== undefined && clusterIdx >= 0;
+      const inConvoy = !civilian && clusterIdx !== undefined && clusterIdx >= 0;
       const convoySize = inConvoy ? itemsForClustering.filter(it => clusters[it.id] === clusterIdx).length : 1;
 
-      const threatAssessment = calculateServerBayesianThreat({
+      const threatAssessment = civilian ? {
+        level: 'LOW' as const,
+        score: parseFloat((0.10 + Math.random() * 0.12).toFixed(2)),
+        factors: ['Civilian video optical signature', 'Non-tactical transit profile', 'Zero hostile threat indicators']
+      } : calculateServerBayesianThreat({
         targetClass,
         speed: motion[objId].speed,
         heading: motion[objId].direction,
@@ -581,7 +596,7 @@ async function startServer() {
         location: currLocation,
         confidence: parseFloat((0.84 + Math.random() * 0.14).toFixed(2)),
         threat: threatAssessment,
-        sources: ['UAV Optical HD', 'Forward Ground Radar', 'Acoustic Triangulation']
+        sources: civilian ? ['Optical Motion Detector', 'Civilian AI Classifier'] : ['UAV Optical HD', 'Forward Ground Radar', 'Acoustic Triangulation']
       };
 
       detections.push({

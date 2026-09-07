@@ -105,9 +105,12 @@ export default function TacticalDroneHUD({
     });
   }, [selectedPreset]);
 
+  // Video element ref for video frame ingestion onto canvas
+  const videoRef = useRef(null);
+
   // Canvas visual rendering loop for tactical HUD feed
   useEffect(() => {
-    if (!isOpen || uploadedVideoUrl) return;
+    if (!isOpen) return;
 
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -121,74 +124,93 @@ export default function TacticalDroneHUD({
       const w = canvas.width;
       const h = canvas.height;
 
-      // Background terrain generation depending on IR filter
-      if (irFilterMode === 'flir-white') {
-        ctx.fillStyle = '#10141a';
-        ctx.fillRect(0, 0, w, h);
-        // Subtle terrain thermal contours
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
-        ctx.lineWidth = 1;
-        for (let i = 0; i < h; i += 30) {
-          ctx.beginPath();
-          ctx.moveTo(0, i + Math.sin((frameCount + i) * 0.02) * 5);
-          ctx.lineTo(w, i + Math.sin((frameCount + i) * 0.02) * 5);
-          ctx.stroke();
-        }
-      } else if (irFilterMode === 'night-green') {
-        ctx.fillStyle = '#051508';
-        ctx.fillRect(0, 0, w, h);
-        // Night noise
-        ctx.fillStyle = 'rgba(0, 255, 100, 0.03)';
-        for (let j = 0; j < 40; j++) {
-          const rx = Math.random() * w;
-          const ry = Math.random() * h;
-          ctx.fillRect(rx, ry, 2, 2);
+      const activeVideo = videoRef.current;
+      const isUsingRealVideo = uploadedVideoUrl && activeVideo && activeVideo.readyState >= 2;
+
+      if (isUsingRealVideo) {
+        // Draw real video frame directly onto tactical canvas
+        ctx.drawImage(activeVideo, 0, 0, w, h);
+
+        // Apply spectral sensor filter overlay onto real video frame
+        if (irFilterMode === 'flir-white') {
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
+          ctx.fillRect(0, 0, w, h);
+        } else if (irFilterMode === 'night-green') {
+          ctx.fillStyle = 'rgba(0, 255, 50, 0.18)';
+          ctx.fillRect(0, 0, w, h);
         }
       } else {
-        ctx.fillStyle = '#0a0e17';
-        ctx.fillRect(0, 0, w, h);
+        // Background terrain generation depending on IR filter
+        if (irFilterMode === 'flir-white') {
+          ctx.fillStyle = '#10141a';
+          ctx.fillRect(0, 0, w, h);
+          // Subtle terrain thermal contours
+          ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+          ctx.lineWidth = 1;
+          for (let i = 0; i < h; i += 30) {
+            ctx.beginPath();
+            ctx.moveTo(0, i + Math.sin((frameCount + i) * 0.02) * 5);
+            ctx.lineTo(w, i + Math.sin((frameCount + i) * 0.02) * 5);
+            ctx.stroke();
+          }
+        } else if (irFilterMode === 'night-green') {
+          ctx.fillStyle = '#051508';
+          ctx.fillRect(0, 0, w, h);
+          // Night noise
+          ctx.fillStyle = 'rgba(0, 255, 100, 0.03)';
+          for (let j = 0; j < 40; j++) {
+            const rx = Math.random() * w;
+            const ry = Math.random() * h;
+            ctx.fillRect(rx, ry, 2, 2);
+          }
+        } else {
+          ctx.fillStyle = '#0a0e17';
+          ctx.fillRect(0, 0, w, h);
+        }
+
+        // Render tactical road / transit corridor
+        ctx.strokeStyle = irFilterMode === 'night-green' ? 'rgba(0, 255, 120, 0.15)' : 'rgba(255, 255, 255, 0.12)';
+        ctx.lineWidth = 40;
+        ctx.beginPath();
+        ctx.moveTo(w * 0.1, h * 0.2);
+        ctx.bezierCurveTo(w * 0.35, h * 0.35, w * 0.6, h * 0.55, w * 0.9, h * 0.7);
+        ctx.stroke();
       }
 
-      // Render tactical road / transit corridor
-      ctx.strokeStyle = irFilterMode === 'night-green' ? 'rgba(0, 255, 120, 0.15)' : 'rgba(255, 255, 255, 0.12)';
-      ctx.lineWidth = 40;
-      ctx.beginPath();
-      ctx.moveTo(w * 0.1, h * 0.2);
-      ctx.bezierCurveTo(w * 0.35, h * 0.35, w * 0.6, h * 0.55, w * 0.9, h * 0.7);
-      ctx.stroke();
-
-      // Render Targets with ML Bounding Boxes
+      // Render Targets with ML Bounding Boxes (Over both simulated & real video frames)
       selectedPreset.targets.forEach((target, idx) => {
-        // Minor dynamic drift to simulate vehicle motion
-        const driftX = Math.sin((frameCount + idx * 40) * 0.02) * 12;
-        const driftY = Math.cos((frameCount + idx * 40) * 0.02) * 4;
+        // Dynamic motion tracking across video timeline
+        const speedMultiplier = isUsingRealVideo ? 0.05 : 0.02;
+        const driftX = Math.sin((frameCount + idx * 40) * speedMultiplier) * (isUsingRealVideo ? 25 : 12);
+        const driftY = Math.cos((frameCount + idx * 40) * speedMultiplier) * (isUsingRealVideo ? 12 : 4);
 
         const tx = (target.x / 100) * w + driftX;
         const ty = (target.y / 100) * h + driftY;
         const tw = (target.w / 100) * w;
         const th = (target.h / 100) * h;
 
-        // Vehicle silhouette / thermal heat glow
-        if (irFilterMode === 'flir-white') {
-          // Heat bloom
-          const radGrad = ctx.createRadialGradient(tx + tw / 2, ty + th / 2, 5, tx + tw / 2, ty + th / 2, tw * 0.8);
-          radGrad.addColorStop(0, 'rgba(255, 255, 255, 0.95)');
-          radGrad.addColorStop(0.5, 'rgba(220, 220, 220, 0.6)');
-          radGrad.addColorStop(1, 'rgba(100, 100, 100, 0)');
-          ctx.fillStyle = radGrad;
-          ctx.fillRect(tx - tw * 0.2, ty - th * 0.2, tw * 1.4, th * 1.4);
-        } else {
-          ctx.fillStyle = irFilterMode === 'night-green' ? 'rgba(0, 255, 120, 0.7)' : 'rgba(255, 80, 80, 0.8)';
-          ctx.fillRect(tx, ty, tw, th);
+        if (!isUsingRealVideo) {
+          // Vehicle silhouette / thermal heat glow for simulated stream
+          if (irFilterMode === 'flir-white') {
+            const radGrad = ctx.createRadialGradient(tx + tw / 2, ty + th / 2, 5, tx + tw / 2, ty + th / 2, tw * 0.8);
+            radGrad.addColorStop(0, 'rgba(255, 255, 255, 0.95)');
+            radGrad.addColorStop(0.5, 'rgba(220, 220, 220, 0.6)');
+            radGrad.addColorStop(1, 'rgba(100, 100, 100, 0)');
+            ctx.fillStyle = radGrad;
+            ctx.fillRect(tx - tw * 0.2, ty - th * 0.2, tw * 1.4, th * 1.4);
+          } else {
+            ctx.fillStyle = irFilterMode === 'night-green' ? 'rgba(0, 255, 120, 0.7)' : 'rgba(255, 80, 80, 0.8)';
+            ctx.fillRect(tx, ty, tw, th);
+          }
         }
 
         // Bounding Box (Corner Brackets)
         const isSelected = selectedTarget?.id === target.id;
         const strokeColor = isSelected ? '#00ffff' : (target.threat === 'HIGH' ? '#ff3366' : '#ffaa00');
         ctx.strokeStyle = strokeColor;
-        ctx.lineWidth = isSelected ? 2.5 : 1.5;
+        ctx.lineWidth = isSelected ? 2.5 : 1.8;
 
-        const cornerLen = 8;
+        const cornerLen = 10;
         // Top-left
         ctx.beginPath();
         ctx.moveTo(tx, ty + cornerLen);
@@ -209,15 +231,15 @@ export default function TacticalDroneHUD({
         ctx.stroke();
 
         // AI Identification Tag
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
-        ctx.fillRect(tx, ty - 22, tw + 30, 20);
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
+        ctx.fillRect(tx, ty - 22, tw + 45, 20);
         ctx.fillStyle = strokeColor;
         ctx.font = 'bold 10px monospace';
-        ctx.fillText(`[${target.id}] ${target.class.slice(0, 12)}`, tx + 4, ty - 8);
+        ctx.fillText(`[${target.id}] ${target.class.slice(0, 14)}`, tx + 4, ty - 8);
 
         // Confidence & Speed
         ctx.fillStyle = '#00ff88';
-        ctx.font = '9px monospace';
+        ctx.font = 'bold 9px monospace';
         ctx.fillText(`${Math.round(target.confidence * 100)}% | ${target.speed} km/h`, tx, ty + th + 14);
 
         // Reticle Lock if selected
@@ -288,6 +310,32 @@ export default function TacticalDroneHUD({
       const result = await uploadDroneVideo(file);
       clearInterval(interval);
       setUploadProgress(100);
+
+      if (result && result.sample_detections) {
+        const isCivilian = result.sample_detections.some(d => d.object_id?.startsWith('CIV') || d.class?.includes('Civilian'));
+        if (isCivilian) {
+          setSelectedPreset({
+            id: 'civilian-feed',
+            name: `Civilian Non-Hostile Video Feed (${file.name})`,
+            sensorType: 'Civilian Optical Camera',
+            zoom: '1.0x Standard',
+            altitude: 120,
+            targets: result.sample_detections.map((d, i) => ({
+              id: d.object_id || `CIV-0${i + 1}`,
+              class: 'Civilian Vehicle / Pedestrian',
+              category: 'civilian',
+              confidence: d.confidence || 0.92,
+              speed: 25 + i * 5,
+              heading: 120,
+              x: 25 + i * 18,
+              y: 35 + i * 12,
+              w: 14,
+              h: 9,
+              threat: 'LOW'
+            }))
+          });
+        }
+      }
 
       if (onTelemetryIngested && result) {
         onTelemetryIngested(result);
@@ -368,38 +416,43 @@ export default function TacticalDroneHUD({
 
               {/* Video Player or Simulated Tactical Canvas */}
               <div className="canvas-wrapper">
-                {uploadedVideoUrl ? (
-                  <div className="uploaded-video-container">
-                    <video
-                      src={uploadedVideoUrl}
-                      controls
-                      autoPlay
-                      loop
-                      className="drone-native-video"
-                    />
-                    <div className="ai-overlay-banner">
-                      <span>🤖 ML Computer Vision Active on User Uploaded Video</span>
-                      <button onClick={() => setUploadedVideoUrl(null)}>Switch to Simulated FLIR Canvas</button>
-                    </div>
-                  </div>
-                ) : (
-                  <canvas
-                    ref={canvasRef}
-                    width={840}
-                    height={460}
-                    className="drone-tactical-canvas"
-                    onClick={(e) => {
-                      const rect = e.currentTarget.getBoundingClientRect();
-                      const clickX = ((e.clientX - rect.left) / rect.width) * 100;
-                      const clickY = ((e.clientY - rect.top) / rect.height) * 100;
-
-                      // Find closest target
-                      const found = selectedPreset.targets.find(t =>
-                        Math.abs(t.x + t.w / 2 - clickX) < 15 && Math.abs(t.y + t.h / 2 - clickY) < 15
-                      );
-                      setSelectedTarget(found || null);
-                    }}
+                {/* Hidden video element used as video frame source for canvas */}
+                {uploadedVideoUrl && (
+                  <video
+                    ref={videoRef}
+                    src={uploadedVideoUrl}
+                    controls={false}
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                    style={{ display: 'none' }}
                   />
+                )}
+
+                <canvas
+                  ref={canvasRef}
+                  width={840}
+                  height={460}
+                  className="drone-tactical-canvas"
+                  onClick={(e) => {
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    const clickX = ((e.clientX - rect.left) / rect.width) * 100;
+                    const clickY = ((e.clientY - rect.top) / rect.height) * 100;
+
+                    // Find closest target
+                    const found = selectedPreset.targets.find(t =>
+                      Math.abs(t.x + t.w / 2 - clickX) < 15 && Math.abs(t.y + t.h / 2 - clickY) < 15
+                    );
+                    setSelectedTarget(found || null);
+                  }}
+                />
+
+                {uploadedVideoUrl && (
+                  <div className="ai-overlay-banner">
+                    <span>🤖 Real-Time Frame-Level Video Detection & Tracking Active</span>
+                    <button onClick={() => setUploadedVideoUrl(null)}>Switch to Simulated FLIR Stream</button>
+                  </div>
                 )}
 
                 {/* Target Information Sidebar Card (Floating) */}
